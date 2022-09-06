@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>host settings</comment>
+    <entry key="processCount">1000</entry>
+    <entry key="db_max_connections">100</entry>
+    <entry key="dbName">jdbc:mysql://192.168.1.245:3306/office</entry>
+    <entry key="database">office</entry>
+    <entry key="host">192.168.1.245</entry>
+    <entry key="port">3306</entry>
+    <entry key="userName">root</entry>
+    <entry key="password">123456</entry>
+    <entry key="driver">com.mysql.jdbc.Driver</entry>
+    <entry key="system_backup_os">0</entry>
+    <entry key="system_mysql_mysqldump_folder">E:/MariaDB/bin</entry>
+    <entry key="system_backup_database_folder">E:/backup/</entry>
+    <entry key="status">true</entry>
+    <entry key="datesConfig">true true true true true true true</entry>
+    <entry key="timeBackup">14:07</entry>
+    <entry key="timeRestore">14:05</entry>
+    <entry key="timeRemoveFileBU">10:54</entry>
+    <entry key="delay_time">3</entry>
+</properties>

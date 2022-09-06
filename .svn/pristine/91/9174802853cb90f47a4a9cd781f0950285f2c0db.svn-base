@@ -1,0 +1,160 @@
+package com.osp.npo.task;
+import com.osp.npo.common.util.Util;
+import com.osp.npo.common.util.database.DBPool;
+import java.math.BigInteger;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Logger;
+/**
+ * Created by QUYENLC on 12/07/2021.
+ */
+public class BackUpFileDataThread implements Runnable{
+    private Connection connection;
+    private String timeBackUp;
+    private int partition;
+    private static final Logger logger = Logger.getLogger(BackUpFileDataThread.class.getName());
+    public void run() {
+        try {
+            connection = DBPool.makeDBConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        // Thời gian backup dữ liệu từ -> hiện tại
+        timeBackUp = timeBackUpDataTo();
+        // Tạo mới bảng lưu trữ dữ liệu dự phòng
+        createTableBackUp();
+        int threads = 10;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<Future<Boolean>> list = new ArrayList<Future<Boolean>>();
+        for(int i=0;i<100;i++){
+            BackUpFileDataCallable callable = new BackUpFileDataCallable(i,timeBackUp);
+            Future<Boolean> future = pool.submit(callable);
+            list.add(future);
+            this.partition=partition+1;
+        }
+        for(Future<Boolean> fut : list){
+            try {
+                //print the return value of Future, notice the output delay in console
+                // because Future.get() waits for task to get completed
+                logger.info(new Date()+ "::"+fut.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        pool.shutdown();
+        // Sửa đổi tên bảng thành bảng backup
+        reNameTableFiledata();
+        // Sửa đổi tên bảng
+        try {
+            reNameTable();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String timeBackUpDataTo(){
+        String threesYearAgo = "";
+        java.util.Date datenow = new Date();
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd");
+        String dateNow = formatter.format(datenow);
+        String[] words = dateNow.split("-");
+        String year = words[0];
+        String month = words[1];
+        String day = words[2];
+        int yearNow = Integer.parseInt(year);
+        int threeYearAgo= yearNow - 3;
+        threesYearAgo = String.valueOf(threeYearAgo) + "-" + month + "-" + day;
+        return threesYearAgo;
+    }
+    //Xóa bảng lưu trữ tạm thời nếu tồn tại
+    private void dropTable(){
+        String sql = "DROP TABLE IF EXISTS phpviet_file_data_temp";
+        Statement stmt = null;
+        try{
+            connection = DBPool.makeDBConnection();
+            if (connection != null) {
+                stmt = connection.createStatement();
+                stmt.executeUpdate(sql);
+            }
+            else {
+                logger.warning("Không kết nối được đến database");
+            }
+        }
+        catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+    private void createTableBackUp() {
+        try {
+            dropTable();
+            String myTableName = "CREATE TABLE phpviet_file_data_temp (\n" +
+                    "  `file_id` varchar(50) NOT NULL DEFAULT '0',\n" +
+                    "  `partition_id` int(10) NOT NULL DEFAULT 0,\n" +
+                    "  `data` longblob,\n" +
+                    "  `html` longtext,\n" +
+                    "  PRIMARY KEY (`file_id`,`partition_id`)\n" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8\n" +
+                    "/*!50100 PARTITION BY HASH (partition_id)\n" +
+                    "PARTITIONS 100 */;";
+            if (connection != null) {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate(myTableName);
+            } else {
+                logger.warning("Không kết nối được đến database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+
+    private void reNameTableFiledata(){
+        Date datenow = new Date();
+        Format formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+        String now = formatter.format(datenow);
+        String sql = "RENAME TABLE phpviet_file_data TO phpviet_file_data_backup_"+now+"";
+        Statement stmt = null;
+        try{
+            if (connection != null) {
+                stmt = connection.createStatement();
+                stmt.executeUpdate(sql);
+            }
+            else {
+                logger.warning("Không kết nối được đến database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+    private void reNameTable() throws SQLException {
+        String sql = "RENAME TABLE phpviet_file_data_temp TO phpviet_file_data";
+        Statement stmt = null;
+        try{
+            if (connection != null) {
+                stmt = connection.createStatement();
+                stmt.executeUpdate(sql);
+            }
+            else {
+                logger.warning("Không kết nối được đến database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+        finally {
+            connection.close();
+        }
+    }
+}

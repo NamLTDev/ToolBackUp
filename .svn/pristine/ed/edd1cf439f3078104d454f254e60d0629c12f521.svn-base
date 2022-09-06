@@ -1,0 +1,170 @@
+package com.osp.npo.task;
+import com.osp.npo.common.util.Util;
+import com.osp.npo.common.util.database.DBPool;
+import java.math.BigInteger;
+import java.sql.*;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Logger;
+/**
+ * Created by QUYENLC on 12/07/2021.
+ */
+public class BackUpFileDataThread implements Runnable{
+    private Connection connection;
+    private BigInteger total;
+    private int page;
+    private String timeBackUp;
+    private static final Logger logger = Logger.getLogger(BackUpFileDataThread.class.getName());
+    public void run() {
+        try {
+            connection = DBPool.makeDBConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        // Thời gian backup dữ liệu từ -> hiện tại
+        timeBackUp = timeBackUpDataTo();
+        // Tạo mới bảng lưu trữ dữ liệu dự phòng
+//        createTableBackUp();
+//        timeBackUp = "2013-05-28";
+        if(connection != null){
+            // Tổng số bản ghi
+            total = count();
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        int numberPage = Util.countPage(total);
+        int threads = 10;
+        if(numberPage < threads){
+            threads = numberPage;
+        }
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<Future<Boolean>> list = new ArrayList<Future<Boolean>>();
+        for(int i=1;i<=numberPage;i++){
+            BackUpFileDataCallable callable = new BackUpFileDataCallable(i,timeBackUp);
+            Future<Boolean> future = pool.submit(callable);
+            list.add(future);
+            this.page=page+1;
+        }
+        for(Future<Boolean> fut : list){
+            try {
+                //print the return value of Future, notice the output delay in console
+                // because Future.get() waits for task to get completed
+                logger.info(new Date()+ "::"+fut.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        pool.shutdown();
+        // Xóa bảng
+        dropTable();
+        // Sửa đổi tên bảng
+        reNameTable();
+    }
+
+    public BigInteger count(){
+        BigInteger result = BigInteger.valueOf(0);
+        StringBuilder str = new StringBuilder();
+        str.append("SELECT COUNT(file_data.file_id) FROM phpviet_file_data file_data ");
+        str.append("INNER JOIN phpviet_file file ");
+        str.append("ON file_data.file_id = file.file_id ");
+        str.append("WHERE file.upload_date >= '"+timeBackUp+"'");
+        PreparedStatement ps = null;
+        try {
+            if (connection != null) {
+                ps = connection.prepareStatement(String.valueOf(str));
+                ResultSet rs = null;
+                rs = ps.executeQuery();
+                rs.next();
+                result = BigInteger.valueOf(rs.getInt(1));
+            } else {
+                logger.warning("Không kết nối được đến database");
+            }
+        }
+        catch (SQLException e) {
+            result = BigInteger.valueOf(0);
+            logger.warning("Có lỗi xảy ra:"+e);
+        }
+        return result;
+    }
+
+    public String timeBackUpDataTo(){
+        String threesYearAgo = "";
+        java.util.Date datenow = new Date();
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd");
+        String dateNow = formatter.format(datenow);
+        String[] words = dateNow.split("-");
+        String year = words[0];
+        String month = words[1];
+        String day = words[2];
+        int yearNow = Integer.parseInt(year);
+        int threeYearAgo= yearNow - 3;
+        threesYearAgo = String.valueOf(threeYearAgo) + "-" + month + "-" + day;
+        return threesYearAgo;
+    }
+
+    public void createTableBackUp() {
+        try {
+            String myTableName = "CREATE TABLE phpviet_file_data2 ("
+                    + "file_id VARCHAR(255) NOT NULL,"
+                    + "partition_id INT(10),"
+                    + "data LONGBLOB,"
+                    + "html LONGTEXT,"
+                    + "PRIMARY KEY(file_id,partition_id))";
+            if (connection != null) {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate(myTableName);
+            } else {
+                logger.warning("Không kết nối được đến database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+    public void dropTable(){
+        String sql = "DROP TABLE phpviet_file_data";
+        Statement stmt = null;
+        try{
+            connection = DBPool.makeDBConnection();
+            if (connection != null) {
+                stmt = connection.createStatement();
+                stmt.executeUpdate(sql);
+            }
+            else {
+                logger.warning("Không kết nối được đến database");
+            }
+        }
+        catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+
+    public void reNameTable(){
+        String sql = "RENAME TABLE phpviet_file_data2 TO phpviet_file_data";
+        Statement stmt = null;
+        try{
+            if (connection != null) {
+                stmt = connection.createStatement();
+                stmt.executeUpdate(sql);
+                connection.close();
+            }
+            else {
+                logger.warning("Không kết nối được đến database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+    }
+}

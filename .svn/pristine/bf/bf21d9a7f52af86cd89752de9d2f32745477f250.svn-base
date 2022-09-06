@@ -1,0 +1,136 @@
+package com.osp.npo.common.controller;
+import com.osp.npo.common.util.Util;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+public class RestoreController {
+    private String database;
+    private String user;
+    private String pass;
+    private String host;
+    private String port;
+    private String system_backup_os;
+    private String system_backup_database_folder;
+    private String system_mysql_mysqldump_folder;
+
+    public void init() {
+        try {
+            Properties prop = new Properties();
+            System.out.println(System.getProperty("user.dir") + "/config.xml");
+            prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+            database = prop.getProperty("database");
+            user = prop.getProperty("userName");
+            pass = prop.getProperty("password");
+            host = prop.getProperty("host");
+            port = prop.getProperty("port");
+            system_backup_os = prop.getProperty("system_backup_os");
+            system_backup_database_folder = prop.getProperty("system_backup_database_folder");
+            system_mysql_mysqldump_folder = prop.getProperty("system_mysql_mysqldump_folder");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    public void restoreThread() {
+        init();
+        boolean checkFileExit = false;
+        String restore = Util.getParam("Bạn có muốn retore dữ liệu? Y/N", "Y");
+        String fileBackUp = "";
+        if("Y".equals(restore.toUpperCase())){
+            fileBackUp = Util.getParam("Chọn file để restore dữ liệu:(để trống mặc định restore dữ liệu backup gần nhất)", "");
+            List<String> lstFileSQL = findFileSqlBackUp();
+            if(fileBackUp == ""){
+                fileBackUp = lstFileSQL.get(0);
+                checkFileExit = true;
+            }
+            else {
+                for(String fileSQL : lstFileSQL){
+                    if(fileSQL.equals(fileBackUp)){
+                        checkFileExit = true;
+                    }
+                }
+            }
+        }
+        else {
+            Util.exit();
+        }
+
+        String filePath =  system_backup_database_folder;
+        if (checkFileExit) {
+            String[] cmd = new String[10];
+            int i = 0;
+            cmd[i++] = system_mysql_mysqldump_folder.substring(0, 2);
+            cmd[i++] = "cd \"" + system_mysql_mysqldump_folder + "\"";
+            cmd[i++] = "mysql -u" + user + " -p" + pass + " -h" + host + " -P" + port + " " + database + " < \"" + filePath + fileBackUp +"\"";
+
+            Runtime c = Runtime.getRuntime();
+            String fileretore = "restore.bat";
+            if (system_backup_os.equals("1")) {
+                fileretore = "restore.sh";
+            }
+            createFileBackUpOrRetore(cmd, fileretore, i);
+            String cmdStr = "cmd /c start " + system_backup_database_folder + "restore.bat";
+            try {
+                Process pro;
+                if (system_backup_os.equals("0")) {
+                    pro = c.exec(cmdStr, null,new File(system_backup_database_folder));
+                } else {
+                    pro = c.exec(system_backup_database_folder + "restore.sh",
+                            null, new File(system_backup_database_folder));
+                }
+                if (pro.waitFor() == 0) {
+                    System.out.println("Khôi phục dữ liệu thành công");
+                }
+                else {
+                    System.out.println("Khôi phục dữ liệu thất bại.Vui lòng thử lại");
+                }
+            } catch (Exception e) {
+                System.out.println("Bạn đã gặp lỗi trong quá trình khôi phục dữ liệu");
+            }
+        }
+        else {
+            System.out.println("File back up không tồn tại");
+        }
+    }
+
+        public void createFileBackUpOrRetore(String[] fileContent, String fileName, int length) {
+            try {
+                File file = new File(system_backup_database_folder + fileName);
+                File folder = new File(system_backup_database_folder);
+                if (file.exists()) {
+                    file.delete();
+                } else {
+                    if (!folder.exists())
+                        folder.mkdirs();
+                }
+                file.createNewFile();
+                PrintWriter writer = new PrintWriter(file, "UTF-8");
+                for (int i = 0; i < length; i++) {
+                    writer.println(fileContent[i]);
+                }
+                writer.println("Exit");
+                writer.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+
+        public List<String> findFileSqlBackUp() {
+            File folder = new File(system_backup_database_folder);
+            File[] files = folder.listFiles();
+            List<String> fileBackUp = new ArrayList<>();
+            for (int i = files.length - 1; i >= 0; i--) {
+                String fileName = files[i].getName();
+                if (fileName.substring(fileName.lastIndexOf(".")).equals(".sql")) {
+                    fileBackUp.add(fileName);
+                }
+            }
+            return fileBackUp;
+        }
+}

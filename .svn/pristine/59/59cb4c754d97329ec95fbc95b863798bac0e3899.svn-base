@@ -1,0 +1,142 @@
+package com.osp.npo.common.controller;
+import com.osp.npo.common.util.ConfigBackupDatabaseManager;
+import com.osp.npo.common.util.Util;
+
+import java.io.*;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.Properties;
+import java.util.logging.Logger;
+
+import static java.lang.Thread.sleep;
+
+public class BackupController {
+    private static final Logger logger = Logger.getLogger(BackupController.class.getName());
+    private String system_backup_os;
+    private String system_backup_database_folder;
+    private String datesConfig;
+    private Util util;
+    private Connection connection;
+
+    public void init() {
+        try {
+            Properties prop = new Properties();
+            System.out.println(System.getProperty("user.dir") + "/config.xml");
+            prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+            system_backup_os = prop.getProperty("system_backup_os");
+            system_backup_database_folder = prop.getProperty("system_backup_database_folder");
+            datesConfig = prop.getProperty("datesConfig");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void backupDBAll() {
+        init();
+        try {
+            ConfigBackupDatabaseManager cfManager = new ConfigBackupDatabaseManager();
+            String fileName = cfManager.createBackupFileBat(0);
+            Runtime c = Runtime.getRuntime();
+            String cmd = "cmd /c start " + system_backup_database_folder + "backup.bat";
+            Process pro;
+            if (system_backup_os.equals("0")) {
+                pro = c.exec(cmd, null, new File(system_backup_database_folder));
+            } else {
+                pro = c.exec(system_backup_database_folder + "backup.sh",
+                        null, new File(system_backup_database_folder));
+            }
+            if (pro.waitFor() == 0) {
+                System.out.println("Back up dữ liệu thành công");
+            } else {
+                System.out.println("Back up dữ liệu thất bại.Vui lòng thử lại");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void backupDBBySelectTable() {
+        init();
+        try {
+            ConfigBackupDatabaseManager cfManager = new ConfigBackupDatabaseManager();
+            String fileName = cfManager.createBackupFileBat(1);
+            Runtime c = Runtime.getRuntime();
+            String cmd = "cmd /c start " + system_backup_database_folder + "backup.bat";
+            Process pro;
+            if (system_backup_os.equals("0")) {
+                pro = c.exec(cmd, null, new File(system_backup_database_folder));
+            } else {
+                pro = c.exec(system_backup_database_folder + "backup.sh",
+                        null, new File(system_backup_database_folder));
+            }
+            if (pro.waitFor() == 0) {
+                System.out.println("Back up dữ liệu theo bảng thành công");
+//                int valueTime = pro.exitValue();
+//                System.out.println("Thời gian:"+valueTime);
+            } else {
+                System.out.println("Back up dữ liệu theo bảng thất bại.Vui lòng thử lại");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void backupDBBySelectTableWithTime() {
+        init();
+        try {
+            ConfigBackupDatabaseManager cfManager = new ConfigBackupDatabaseManager();
+            String fileName = cfManager.createBackupFileBat(2);
+            Runtime c = Runtime.getRuntime();
+            String cmd = "cmd /c start " + system_backup_database_folder + "backup.bat";
+            Process pro;
+            if (system_backup_os.equals("0")) {
+                pro = c.exec(cmd, null, new File(system_backup_database_folder));
+            } else {
+                pro = c.exec(system_backup_database_folder + "backup.sh",
+                        null, new File(system_backup_database_folder));
+            }
+            if (pro.waitFor() == 0) {
+//                System.out.println("Back up dữ liệu theo bảng thành công");
+            }else {
+                System.out.println("Back up dữ liệu theo bảng thất bại.Vui lòng thử lại");
+            }
+            boolean process_compeleted = false;
+            boolean success = true;
+            if(success){
+                if(!processFound()){
+                    logger.info("Back up dữ liệu theo bảng thành công");
+                    process_compeleted = true;
+                    success = false;
+                }
+                else {
+                    process_compeleted = false;
+                }
+                if(!process_compeleted){
+                    sleep(3000);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public boolean processFound() throws IOException {
+        String findProcess = "mysqldump.exe";
+        String filenameFilter = "/nh /fi \"Imagename eq "+findProcess+"\"";
+        String tasksCmd = System.getenv("windir") +"/system32/tasklist.exe "+filenameFilter;
+
+        Process p = Runtime.getRuntime().exec(tasksCmd);
+        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+        ArrayList<String> procs = new ArrayList<String>();
+        String line = null;
+        while ((line = input.readLine()) != null)
+            procs.add(line);
+        input.close();
+        Boolean processFound = procs.stream().filter(row -> row.indexOf(findProcess) > -1).count() > 0;
+        System.out.println(processFound);
+        return processFound;
+// Head-up! If no processes were found - we still get:
+// "INFO: No tasks are running which match the specified criteria."
+}
+
+}

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>host settings</comment>
+    <entry key="processCount">1000</entry>
+    <entry key="db_max_connections">100</entry>
+    <entry key="dbName">jdbc:mysql://localhost:3306/office</entry>
+    <entry key="database">office</entry>
+    <entry key="host">localhost</entry>
+    <entry key="port">3306</entry>
+    <entry key="userName">root</entry>
+    <entry key="password"></entry>
+    <entry key="driver">com.mysql.jdbc.Driver</entry>
+    <!--Hệ điều hành máy chủ backup dữ liệu(0:Window,1:Linux)!-->
+    <entry key="system_backup_os">0</entry>
+    <entry key="system_mysql_mysqldump_folder">C:/MariaDB/bin</entry>
+    <entry key="system_backup_database_folder">C:/backup/</entry>
+    <entry key="system_backupAll_database_folder">C:/backup/backupAll/</entry>
+    <entry key="system_backupTable_database_folder">C:/backup/backupTable/</entry>
+    <entry key="status">true</entry>
+    <!--Ngày tiến hành backup trong tuần!-->
+    <entry key="datesConfig">true true true true true true true</entry>
+    <!--Thời gian backup dữ liệu!-->
+    <entry key="timeBackup">9:26</entry>
+    <!--Thời gian khôi phục dữ liệu!-->
+<!--    <entry key="timeRestore">14:05</entry>-->
+    <!--Thời gian xóa file backup dữ liệu được lưu trữ!-->
+    <entry key="timeRemoveFileBU">15:26</entry>
+    <!--Back up bảng "phpviet_file_data" theo thời gian!-->
+    <entry key="fileDataBUWithTime">phpviet_file_data</entry>
+    <!--Cấu hình back up phpviet_file_data lựa chọn thời gian bắt đầu !-->
+    <!--Lựa chọn teho mẫu VD:2020-01-01(năm-tháng-ngày)!-->
+    <entry key="startTime">2020-01-01</entry>
+    <!--Cấu hình back up phpviet_file_data lựa chọn thời gian kết thúc !-->
+    <entry key="endTime">2021-07-31</entry>
+    <entry key="data_directory">C:/store</entry>
+</properties>

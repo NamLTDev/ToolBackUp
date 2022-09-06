@@ -1,0 +1,108 @@
+package com.osp.npo.task;
+
+import com.osp.npo.common.util.Util;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.logging.Logger;
+
+/**
+ * Created by QUYENLC on 12/07/2021.
+ */
+
+public class RemoveFileBackUpThreadAuto extends Thread {
+    private static final Logger logger = Logger.getLogger(RemoveFileBackUpThreadAuto.class.getName());
+    private String system_backup_database_folder;
+    private String status;
+    private String timeRemoveFileBU;
+
+    public static void main(String[] arg) {
+        new RemoveFileBackUpThreadAuto().start();
+    }
+
+    public void init() {
+        try {
+            Properties prop = new Properties();
+            System.out.println(System.getProperty("user.dir") + "/config.xml");
+            prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+            system_backup_database_folder = prop.getProperty("system_backup_database_folder");
+            status = prop.getProperty("status");
+            timeRemoveFileBU = prop.getProperty("timeRemoveFileBU");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void run() {
+        init();
+        while (true) {
+            Calendar cal = Calendar.getInstance();
+            Util util = new Util();
+            List<String> listDateBackup = util.convertListBooleanToListString();
+            String dayOfWeek = util.getDayOfWeek(cal.get(Calendar.DAY_OF_WEEK));
+            boolean dayOfWeekRemoveFile = false;
+            if (listDateBackup.size() > 0) {
+                dayOfWeekRemoveFile = listDateBackup.contains(dayOfWeek);
+                    if (dayOfWeekRemoveFile) {
+                        logger.info("Tiến hành xóa dữ liệu file backup lưu trữ theo số ngày cấu hình-----------------------------------");
+                        this.removeFileBackUpThread();
+                    } else {
+                        logger.info("Ngày không tiến hành xóa dữ liệu file backup lưu trữ theo số ngày cấu hình-----------------------------------");
+                    }
+                    break;
+            }
+            try {
+                sleep(24 * 60 * 60000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void removeFileBackUpThread() {
+        List<String> allFileBackUp = new ArrayList<>();
+        File folder = new File(system_backup_database_folder);
+        File[] files = folder.listFiles();
+        for (int i = files.length - 1; i >= 0; i--) {
+            String fileName = files[i].getName();
+            if (fileName.substring(fileName.lastIndexOf(".")).equals(".sql")) {
+                allFileBackUp.add(fileName);
+            }
+        }
+        Date date = new Date();
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd");
+        String dateNow = formatter.format(date);
+
+        for (String dateBU : allFileBackUp) {
+            String dateBackUp = dateBU.substring(7, 17);
+            dateNow = dateNow.replaceAll("-", "/");
+            dateBackUp = dateBackUp.replaceAll("-", "/");
+            Date now = new Date(dateNow);
+            Date dateFile = new Date(dateBackUp);
+            Long millisBetween = now.getTime() - dateFile.getTime();
+            Long days = millisBetween / (1000 * 3600 * 24);
+            int result = Math.round(Math.abs(days));
+            if (dateFile.getTime() < now.getTime()) {
+                if (result > 1) {
+                    try {
+                        boolean success = Files.deleteIfExists(Paths.get(system_backup_database_folder + dateBU));
+                        if (success) {
+                            logger.info("Xoá file back up " + dateBU + " thành công");
+                        } else {
+                            logger.warning("Xoá file back up " + dateBU + " thất bại");
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+}

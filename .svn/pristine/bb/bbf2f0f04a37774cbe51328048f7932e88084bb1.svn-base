@@ -1,0 +1,129 @@
+package com.osp.npo.common.util;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+/**
+ * Created by QUYENLC on 12/07/2021.
+ */
+public class Util {
+    static BufferedReader keyboard;
+    private String datesConfig;
+    static
+    {
+        keyboard = new BufferedReader(new InputStreamReader(System.in));
+    }
+
+
+    public void init() {
+        try {
+            Properties prop = new Properties();
+            System.out.println(System.getProperty("user.dir") + "/config.xml");
+            prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+            datesConfig = prop.getProperty("datesConfig");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static String getParam(String prompt, String defaultValue)
+    {
+        String value = "";
+        String promptFull = prompt;
+        promptFull = promptFull + (defaultValue == null ? "" : " [" + defaultValue + "] ");
+        System.out.print(promptFull);
+        try
+        {
+            value = keyboard.readLine();
+        }
+        catch(IOException ioexception) { }
+        if(value.compareTo("") == 0)
+        {
+            return defaultValue;
+        } else
+        {
+            return value;
+        }
+    }
+    public static void exit()
+    {
+        System.out.println("Thao tác Exit....");
+        System.exit(1);
+    }
+
+    public List<String> convertListBooleanToListString() {
+        init();
+        List<String> listDateConfig = new ArrayList<String>();
+        List<Boolean> listDate = null;
+        listDate = parseListDateBackup(datesConfig);
+        for (int i = 0; i < listDate.size(); i++) {
+            if (listDate.get(i) == true) {
+                if (i == 6) {
+                    listDateConfig.add("Sunday");
+                } else {
+                    listDateConfig.add(getDayOfWeek(i + 2));
+                }
+            }
+        }
+        return listDateConfig;
+    }
+
+    public String getDayOfWeek(int value) {
+        String day = "";
+        switch (value) {
+            case 1:
+                day = "Sunday";
+                break;
+            case 2:
+                day = "Monday";
+                break;
+            case 3:
+                day = "Tuesday";
+                break;
+            case 4:
+                day = "Wednesday";
+                break;
+            case 5:
+                day = "Thursday";
+                break;
+            case 6:
+                day = "Friday";
+                break;
+            case 7:
+                day = "Saturday";
+                break;
+        }
+        return day;
+    }
+
+    public List<Boolean> parseListDateBackup(String key){
+        List<Boolean> subkeys = new ArrayList<Boolean>();
+        String[] date = key.split(" ");
+        for(int i = 0;i<date.length ;i++){
+            subkeys.add(Boolean.parseBoolean(date[i]));
+        }
+        while(subkeys.size() < 7){
+            subkeys.add(Boolean.parseBoolean("false"));
+            if(subkeys.size() == 7){
+                break;
+            }
+        }
+        return subkeys;
+    }
+
+    public static int countPage(BigInteger total) {
+        int rowPerpage = 1000;
+        int result = 0;
+        result = total.intValue() / rowPerpage;
+        int temp = total.intValue() % rowPerpage;
+        if (temp > 0) {
+            result = result + 1;
+            return result;
+        } else return result;
+    }
+}

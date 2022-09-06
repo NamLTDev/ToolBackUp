@@ -1,0 +1,15 @@
+eclipse.preferences.version=1
+encoding//src/com/osp/npo/common/controller/BackupController.java=UTF-8
+encoding//src/com/osp/npo/common/controller/RemoveFileBackUpController.java=UTF-8
+encoding//src/com/osp/npo/common/controller/RestoreController.java=UTF-8
+encoding//src/com/osp/npo/common/util/ConfigBackupDatabaseManager.java=UTF-8
+encoding//src/com/osp/npo/common/util/ConfigDatabaseManage.java=UTF-8
+encoding//src/com/osp/npo/common/util/Util.java=UTF-8
+encoding//src/com/osp/npo/common/util/database/DBPool.java=UTF-8
+encoding//src/com/osp/npo/task/BackUpDBStart.java=UTF-8
+encoding//src/com/osp/npo/task/BackUpFileDataCallable.java=UTF-8
+encoding//src/com/osp/npo/task/BackUpFileDataThread.java=UTF-8
+encoding//src/com/osp/npo/task/BackUpFileDateDailyThreadAuto.java=UTF-8
+encoding//src/com/osp/npo/task/BackupThreadAuto.java=UTF-8
+encoding//src/com/osp/npo/task/RemoveFileBackUpThreadAuto.java=UTF-8
+encoding//src/com/osp/npo/task/RestoreThreadAuto.java=UTF-8

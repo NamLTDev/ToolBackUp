@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<comment/>
+<entry key="password"/>
+<entry key="timeRemoveFileBU">15:26</entry>
+<entry key="system_backupAll_database_folder">D:/backup/backupAll/</entry>
+<entry key="endTime">2021-07-31</entry>
+<entry key="fileDataBUWithTime">phpviet_file_data</entry>
+<entry key="system_backup_os">0</entry>
+<entry key="dateTime">2021-08-13 08:30:35</entry>
+<entry key="driver">com.mysql.jdbc.Driver</entry>
+<entry key="port">3306</entry>
+<entry key="userName">root</entry>
+<entry key="timeBackup">9:26</entry>
+<entry key="database">office</entry>
+<entry key="host">localhost</entry>
+<entry key="startTime">2020-01-01</entry>
+<entry key="datesConfig">true true true true true true true</entry>
+<entry key="system_mysql_mysqldump_folder">D:/MySQL/bin</entry>
+<entry key="status">true</entry>
+<entry key="system_backupTable_database_folder">D:/backup/backupTable/</entry>
+<entry key="system_backup_database_folder">D:/backup/</entry>
+<entry key="processCount">1000</entry>
+<entry key="db_max_connections">100</entry>
+<entry key="timeBackupFileData">8:46</entry>
+<entry key="data_directory">C:/store</entry>
+<entry key="dbName">jdbc:mysql://localhost:3306/office</entry>
+</properties>

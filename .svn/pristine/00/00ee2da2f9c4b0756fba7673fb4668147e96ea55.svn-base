@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact name="TUPDTD">
+    <output-path>$PROJECT_DIR$/classes/artifacts/TUPDTD</output-path>
+    <root id="root">
+      <element id="archive" name="TUPDTD.jar">
+        <element id="module-output" name="TUPDTD" />
+      </element>
+      <element id="library" level="project" name="mysql-connector-java-5.1.6-bin" />
+    </root>
+  </artifact>
+</component>

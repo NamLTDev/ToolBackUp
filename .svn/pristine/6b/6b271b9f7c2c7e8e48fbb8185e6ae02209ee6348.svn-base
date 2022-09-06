@@ -1,0 +1,191 @@
+package com.osp.npo.task;
+
+import com.osp.npo.common.util.*;
+import com.osp.npo.common.util.database.DBPool;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Date;
+import java.util.logging.Logger;
+
+/**
+ * Created by QUYENLC on 12/07/2021.
+ */
+public class BackUpFileDateDailyThreadAuto extends Thread {
+    private static final Logger logger = Logger.getLogger(BackupThreadAuto.class.getName());
+    private String status;
+    private String timeBackupFileData;
+    private Long dateTime;
+
+    public static void main(String[] arg) {
+        new BackupThreadAuto().start();
+    }
+
+    public void init() {
+        try {
+            Properties prop = new Properties();
+            prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+            status = prop.getProperty("status");
+            timeBackupFileData = prop.getProperty("timeBackupFileData");
+            dateTime = Long.parseLong(prop.getProperty("dateTime"));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void run() {
+        init();
+        while (true) {
+            Calendar cal = Calendar.getInstance();
+            Util util = new Util();
+            List<String> listDateBackup = util.convertListBooleanToListString();
+            String dayOfWeek = util.getDayOfWeek(cal.get(Calendar.DAY_OF_WEEK));
+            if (listDateBackup.size() > 0) {
+                for (int i = 0; i < listDateBackup.size(); i++) {
+                    if (dayOfWeek.equals(listDateBackup.get(i))) {
+                        try {
+                            if (cal.get(Calendar.HOUR_OF_DAY) == Integer.parseInt(timeBackupFileData.split(":")[0])) {
+                                if (cal.get(Calendar.MINUTE) == Integer.parseInt(timeBackupFileData.split(":")[1])) {
+                                    if (status.equals("true")) {
+                                        List<String> date = checkDateBUBefore();
+                                        boolean tableExist = tableExist();
+                                        if(tableExist){
+                                            int countInsert = this.backUpFileDateDaily(date.get(0), date.get(1));
+                                            if(countInsert >= 0){
+                                                logger.info("Back up bang phpviet_file_data thanh cong voi "+countInsert+" ban ghi");
+                                                //Cap nhat lai thoi gian data da chay trong config.xml
+                                                Properties prop = new Properties();
+                                                try {
+                                                    prop.loadFromXML(new FileInputStream(System.getProperty("user.dir") + "/config.xml"));
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                                DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                                Date dateUpdate = formatter.parse(date.get(1));
+                                                Calendar calT = Calendar.getInstance();
+                                                calT.setTime(dateUpdate);
+                                                File configFile = new File(System.getProperty("user.dir")+"/config.xml");
+                                                OutputStream outputStream = new FileOutputStream(configFile);
+                                                prop.setProperty("dateTime", calT.getTimeInMillis() + "");
+                                                prop.storeToXML(outputStream, "");
+                                                outputStream.close();
+                                            }
+                                        }
+                                    } else {
+                                    }
+                                } else {
+                                }
+                            } else {
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    }
+                }
+            }
+            try {
+                sleep(60000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private List<String> checkDateBUBefore() throws IOException {
+        init();
+        List<String> date = new ArrayList<>();
+        if (System.currentTimeMillis() >= dateTime) {
+            // Thời gian back up từ
+            Calendar calF = Calendar.getInstance();
+            calF.setTimeInMillis(dateTime+1000);
+            DateFormat df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String dateF = df2.format(calF.getTime());
+            date.add(dateF);
+            // Đến
+            Calendar calT = Calendar.getInstance();
+            DateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String dateT = dt.format(calT.getTime());
+            date.add(dateT);
+        }
+        return date;
+    }
+
+    private int backUpFileDateDaily(String dateFrom, String toDate) throws SQLException {
+        StringBuilder str = new StringBuilder();
+        str.append("INSERT INTO phpviet_file_data_log ");
+        str.append("SELECT DISTINCT file_data.file_id,file_data.partition_id,file_data.data,file_data.html FROM phpviet_file_data file_data ");
+        str.append("INNER JOIN phpviet_file file ");
+        str.append("ON file_data.file_id = file.file_id ");
+        str.append("WHERE file.upload_date >= '" + dateFrom + "' ");
+        str.append("AND file.upload_date <= '" + toDate + "' ");
+        PreparedStatement ps = null;
+        int result = 0;
+        Connection connection = DBPool.makeDBConnection();
+        try{
+            if (connection != null) {
+                ps = connection.prepareStatement(String.valueOf(str));
+                result = ps.executeUpdate();
+            } else {
+                logger.warning("Không kết nối được đến database");
+            }
+        }
+        catch (SQLException e) {
+            result = 0;
+            logger.warning("Có lỗi xảy ra:"+e);
+            e.printStackTrace();
+        }
+        finally {
+            connection.close();
+        }
+        return result;
+    }
+    private boolean tableExist() throws SQLException {
+        Connection connection = DBPool.makeDBConnection();
+        DatabaseMetaData dbm = connection.getMetaData();
+      // check if "phpviet_file_data_log" table is there
+        ResultSet tables = dbm.getTables(null, null, "phpviet_file_data_log", null);
+        boolean tableExist = false;
+        if (tables.next()) {
+            // Table exists
+            tableExist = true;
+        }
+        else {
+            // Table does not exist
+            createTableBackUp();
+            tableExist = true;
+        }
+        return tableExist;
+    }
+
+    private void createTableBackUp() throws SQLException {
+        Connection connection = DBPool.makeDBConnection();
+        try {
+            String myTableName = "CREATE TABLE phpviet_file_data_log (\n" +
+                    "  `file_id` varchar(50) NOT NULL DEFAULT '0',\n" +
+                    "  `partition_id` int(10) NOT NULL DEFAULT 0,\n" +
+                    "  `data` longblob,\n" +
+                    "  `html` longtext,\n" +
+                    "  PRIMARY KEY (`file_id`,`partition_id`)\n" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8\n" +
+                    "/*!50100 PARTITION BY HASH (partition_id)\n" +
+                    "PARTITIONS 100 */;";
+            if (connection != null) {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate(myTableName);
+            } else {
+                logger.warning("Khong ket noi duoc den database");
+            }
+        } catch (SQLException e) {
+            logger.warning("Co loi xay ra:"+e);
+            e.printStackTrace();
+        }
+    }
+}
